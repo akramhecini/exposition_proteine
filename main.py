@@ -10,15 +10,14 @@ parser.add_argument("-s", type = float, help = "This is the VDW radius value of 
 
 
 
-dic_rayon = {"H": 1.2, "C":1.7 , "N": 1.55, "O":1.52, "F":1.47 , "P": 1.8, "S":1.8}
+dic_rayon = {"H": 1.2, "C":1.9 , "N": 1.5, "O":1.4, "F":1.47 , "P": 1.8, "S":1.85}
 
 argmnt = parser.parse_args()
 
 df = pp.coordonnees(argmnt.pdb_file)
 
-expo = pp.exposition_calculate(df,dic_rayon, argmnt.rayon_solvant)
+data_new = pp.exposition_calculate(df,dic_rayon, argmnt.rayon_solvant)
 
-df["Exposition"] = expo
+data_new2 = pp.exposition_residues(df)
 
-print(df.head())
-
+print(data_new2)

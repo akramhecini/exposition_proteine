@@ -3,9 +3,6 @@ import numpy as np
 import math
 
 
-####################
-
-
 # fonction pour générer des points sur une spehere : centre (0,0,0) et r = 1
 
 dic_rayon = {"H": 1.2, "C":1.7 , "N": 1.55, "O":1.52, "F":1.47 , "P": 1.8, "S":1.8}
@@ -34,26 +31,26 @@ def coordonnees(fichier):
     """This function will return a DataFrame from a PDB file. The DataFrame contains 6 different columns : 
     Atomes, Premiere lettre de chaque Atome,  coordonnees ( x , y , z), Rayon de VDW """
 
-    dic =  {} 
+    dic =  {} #a dictionary that will contain atoms and their coordinates
 
-    with open(fichier, "r") as filin:
+    with open(fichier, "r") as filin: #reading the pdb file 
 
 	    for ligne in filin:
 
 		    if ligne[0:5].strip() == 'ATOM':
 
-			    crd = [float(ligne[30:38].strip()), float(ligne[38:46].strip()), float(ligne[46:54].strip())]
+			    crd = [float(ligne[30:38].strip()), float(ligne[38:46].strip()), float(ligne[46:54].strip())] # extracting the atoms coordinates
 
-			    signature = ligne[6:11].strip()+'_'+ligne[12:16].strip()+"_"+ligne[17:20].strip()
+			    signature = ligne[6:11].strip()+'_'+ligne[12:16].strip()+"_"+ligne[17:20].strip()+"_"+ligne[22:26].strip() #a signature that is specific to each atom 
 
-			    dic[signature] = crd
+			    dic[signature] = crd # the signature is the key and the coordinates are the values 
 			
 
-    df=pd.DataFrame.from_dict(dic,orient='index')
+    df=pd.DataFrame.from_dict(dic,orient='index') # transoforming the dictionary into  a dataframe
 
-    df.columns = ['x', 'y','z']
+    df.columns = ['x', 'y','z'] #changing the columns names 
 
-    df.reset_index(level=0, inplace=True)
+    df.reset_index(level=0, inplace=True) #reset the indexing 
 
 
 # new data frame with split value columns 
@@ -72,12 +69,13 @@ def coordonnees(fichier):
 # making separate Residue column from new data frame 
 
     df["Res"] = new[2] 
+    df["nbr"] = new[3]
   
 # Dropping old Name columns 
 
     df.drop(columns =["index"], inplace = True) 
 
-    #df.drop(columns =["ind"], inplace = True)
+    df.drop(columns =["ind"], inplace = True)
 
     df['At'] = df['Atome'].astype(str).str[0]
 
@@ -102,36 +100,48 @@ using the atom's coordinates as the new sphere center and the VDW radius as the 
 
 The surface of the sphere is then calculated. The function 'Distance' is then called. 
 
-exposition_calculate Function finally return the expostion of all atoms to the solvant. 
+exposition_calculate Function finally return the expostion of all atoms to the solvant and the percentage of  exposition
     """
 
-    col_rayon = [0]*len(df.index)
+    col_rayon = [0]*len(df.index) # a new list that will be transformed later into a dataframe column, it will contain the VDW radius 
 	
-    exposition = []
+    exposition = [] # a list of the exposition values 
+    prc = []
 
-    for index, row in df.iterrows():
+    for index, row in df.iterrows(): #parsing the dataframe
 
-        if row["At"] in dic_rayon:
+        if row["At"] in dic_rayon: # if the atom exists in the dictionary 
 
-            col_rayon[index] = dic_rayon[row["At"]]
+            col_rayon[index] = dic_rayon[row["At"]] # I extract the VDW radius value 
 
             xi, yi, zi = sample_spherical(100)  #create sphere 
 
-            xi = (xi+row['x'])*dic_rayon[row["At"]] #translocation 
+            rayon_atome = dic_rayon[row["At"]]
 
-            yi = (yi+row['y'])*dic_rayon[row["At"]]
+            xi = (xi+row['x'])*rayon_atome #translocation  of x values 
 
-            zi = (zi+row['z'])*dic_rayon[row["At"]]
+            yi = (yi+row['y'])*rayon_atome #translocation  of y values 
 
-            surface = math.pi*4*dic_rayon[row["At"]] #je calcule ma surface
+            zi = (zi+row['z'])*rayon_atome #translocation  of z values 
 
-            dis_euc = distance(xi,yi,zi,index,surface,df)
+            surface = math.pi*4*rayon_atome #je calcule ma surface
 
-            expp = (sum(d > rayon_solvant for d in dis_euc)/len(dis_euc))*surface #calculate the exposition
+            dis_euc = distance(xi,yi,zi,index,surface,df) # calling the distance function 
 
-            exposition.append(expp)
+            pourcentage = (sum(d > (rayon_solvant*2+rayon_atome) for d in dis_euc)/len(dis_euc)) #calculate the percentage of exposition to the solvant
 
-    return exposition
+            expp = pourcentage*surface #calculate the exposition
+
+            prc.append(pourcentage)
+
+            exposition.append(expp) #adding the exposition value to the list 
+
+    df["pourcentage"] = prc
+
+    df["Exposition"] = exposition
+
+
+    return df #returning the percentages and the exposition values 
 
 
 
@@ -166,6 +176,15 @@ value of exposition to the solvant
             dis_euc.append(dist_p1_p2)#put the distance in a list
 
     return (dis_euc)
+
+
+def exposition_residues(df):
+
+    df_new = df.groupby(['Res','nbr'])["Exposition"].sum()
+
+    return(df_new)
+        
+    
 
 
 
