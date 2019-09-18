@@ -1,4 +1,5 @@
-#import p5 as pp
+
+
 import p7 as pp
 import argparse 
 
@@ -21,3 +22,7 @@ data_new = pp.exposition_calculate(df,dic_rayon, argmnt.rayon_solvant)
 data_new2 = pp.exposition_residues(df)
 
 print(data_new2)
+
+data_new.to_csv('expo_atome.csv', sep='\t')
+
+data_new2.to_csv('expo_resid.csv', sep='\t')
